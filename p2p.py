@@ -259,7 +259,7 @@ if __name__ == "__main__":
         curr_time = item[0]
         type = item[1]
         
-        if(curr_time > 1000):
+        if(curr_time > 10000):
             break
         
         if(type=="TxnGenerated"):
@@ -363,7 +363,7 @@ if __name__ == "__main__":
             for i in range(len(current_bal)):
                 if current_bal[i] < 0:
                     valid_blk = False
-            if not valid_blk:
+            if not valid_blk or blk.size > 1000:
                 continue
 
             #Add to cache if no parent
@@ -416,7 +416,10 @@ if __name__ == "__main__":
             while q_len > 0:
                 p = q[0]
                 q.pop(0)
-                print(f"{p.blk_id} : {p.time} ", end = "", file=treeFile)
+                if(p.parent != None):
+                    print(f"{p.blk_id}({p.parent.blk_id}) : {p.time} ", end = "", file=treeFile)
+                else:
+                    print(f"{p.blk_id}(genesis block) : {p.time} ", end = "", file=treeFile)
                 for child in p.children:
                     q.append(child)
                 q_len -= 1
