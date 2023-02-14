@@ -3,6 +3,7 @@ from queue import PriorityQueue
 import numpy as np
 from random import sample
 import copy
+import os
 
 T_tx = 0
 event_queue = PriorityQueue()
@@ -63,16 +64,19 @@ class Peer:
         blk_txns = set([])
         size = 0
         curr_balances = copy.deepcopy(parent.final_balance)
+        curr_balances_new = copy.deepcopy(parent.final_balance)
         for txn in self.txn_pool:
             if len(blk_txns) == 998:
                 break
             if txn.amount <= curr_balances[int(txn.payer_id)]:
                 blk_txns.add(txn)
                 curr_balances[int(txn.payer_id)] -= txn.amount
-                curr_balances[int(txn.rec_id)] += txn.amount
+                curr_balances_new[int(txn.rec_id)] += txn.amount
+                curr_balances_new[int(txn.payer_id)] -= txn.amount
+        curr_balances_new[self.index] += 50
         size = len(blk_txns) + 2
         blk_txns.add(coinbase)
-        blk = Block(blk_id, parent, blk_txns, size, self.id, curr_balances)
+        blk = Block(blk_id, parent, blk_txns, size, self.id, curr_balances_new)
         self.block_generated += 1
         return time, blk
 
@@ -317,9 +321,9 @@ if __name__ == "__main__":
 
             #Check if block still valid
             if peers[creator_index].last_block != blk.parent:
-                time, new_blk = peers[creator_index].generate_block(peers[creator_index].last_block)
-                data = {'blk': new_blk}
-                event_queue.put((curr_time + time, "BlkGenerated", data))
+                #time, new_blk = peers[creator_index].generate_block(peers[creator_index].last_block)
+                #data = {'blk': new_blk}
+                #event_queue.put((curr_time + time, "BlkGenerated", data))
                 print(f"Block {blk.blk_id} failed")
                 continue
 
@@ -359,7 +363,7 @@ if __name__ == "__main__":
             for txn in blk.txns:
                 if(txn.payer_id != None):
                     current_bal[int(txn.payer_id)] -= txn.amount
-                current_bal[int(txn.rec_id)] += txn.amount
+                #current_bal[int(txn.rec_id)] += txn.amount
             for i in range(len(current_bal)):
                 if current_bal[i] < 0:
                     valid_blk = False
@@ -389,6 +393,9 @@ if __name__ == "__main__":
             if added_blk.level > peers[receiver_index].last_block.level:
                 peers[receiver_index].last_block = added_blk
                 peers[receiver_index].balances = added_blk.final_balance
+                time, new_blk = peers[receiver_index].generate_block(peers[receiver_index].last_block)
+                data = {'blk': new_blk}
+                event_queue.put((curr_time + time, "BlkGenerated", data))
 
             #Send block to neighbors
             for neighbor in peers[receiver_index].connected_peers:
@@ -406,11 +413,12 @@ if __name__ == "__main__":
             print(f"Block received by {receiver_index} at time {curr_time}")
 
     #Save blockchain tree along with time for each peer using level tree traversal
-    treeFile = open('tree.txt', 'w')
+    os.mkdir('trees')
     for i in range(n):
+        treeFileStr = 'trees/tree' + str(i) + '.txt'
+        treeFile = open(treeFileStr, 'w')
         gen_blk = peers[i].gen_block
         q = [gen_blk]
-        print(f"Peer {i}", file=treeFile)
         while len(q) > 0:
             q_len = len(q)
             while q_len > 0:
@@ -424,5 +432,12 @@ if __name__ == "__main__":
                     q.append(child)
                 q_len -= 1
             print("",file=treeFile)
+    treeFile.close()
 
     #Saving block related info into a file for debugging
+    '''blockFile = open('block.txt', 'w')
+    for i in range(n):
+        print(f"Peer {i}", file=blockFile)
+        for blk in peers[i].block_set.values():
+            print(f"{blk.blk_id} {blk.size} {len(blk.txns)} {blk.final_balance}", file=blockFile)
+    blockFile.close()'''
