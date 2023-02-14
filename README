@@ -1,0 +1,2 @@
+To run the code simply use the command 'python3 p2p.py --n <N> --z0 <Z0> --z1 <Z1> --T_tx <T_tx>'
+where <N>, <Z0>, <Z1> and <T_tx> are values of n, z0, z1 and T_tx respectively.
