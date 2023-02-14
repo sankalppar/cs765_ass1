@@ -27,6 +27,7 @@ class Peer:
         self.coinbase_generated = 1
         self.block_generated = 1
         self.block_set = {self.gen_block.blk_id : self.gen_block}
+        self.block_cache = set([])
 
     def add_neighbor(self, neighbor):
         self.connected_peers.add(neighbor)
@@ -118,7 +119,7 @@ def init_Peers(n, z0, z1, balance_scale):
     for i in range(n):
         txn_id = format(i, '04d') + '000000'
         gen_txns.append(Transaction(txn_id, None, format(i, '04d'), balances[i]))
-    gen_block_id = format(0, '10d')
+    gen_block_id = '0000000000'
     gen_block = Block(gen_block_id, None, gen_txns, len(gen_txns) + 1, None, balances)
 
     for i in range(n):
@@ -294,6 +295,8 @@ if __name__ == "__main__":
             
             if(txn in peers[receiver].txn_pool):
                 continue
+
+            peers[receiver].txn_pool.add(txn)
     
             for neighbor in peers[receiver].connected_peers:
                 neighbor_index = neighbor.index
@@ -320,6 +323,7 @@ if __name__ == "__main__":
                 continue
 
             peers[creator_index].balances = blk.final_balance
+            peers[creator_index].txn_pool = peers[creator_index].txn_pool.difference(blk.txns)
 
             #Broadcast block to neighbor nodes
             for neighbor in peers[creator_index].connected_peers:
@@ -361,11 +365,21 @@ if __name__ == "__main__":
             if not valid_blk:
                 continue
 
-            #Add to parent block
+            #Add to cache if no parent
+            if not(blk.parent.blk_id in peers[receiver_index].block_set.keys()):
+                peers[receiver_index].block_cache.add(item[2])
+                continue
+            #Otherwise add child to parent
             parent_blk = peers[receiver_index].block_set[blk.parent.blk_id]
             added_blk = parent_blk.add_child(blk)
             added_blk.time = curr_time
             peers[receiver_index].block_set[added_blk.blk_id] = added_blk
+
+            #Check if child already present in cache
+            for block_data in peers[receiver_index].block_cache:
+                if block_data['blk'].parent.blk_id == added_blk.blk_id:
+                    peers[receiver_index].block_cache.remove(block_data)
+                    event_queue.put((curr_time, "BlkReceived", block_data))
 
             #Remove txns from txn pool
             peers[receiver_index].txn_pool = peers[receiver_index].txn_pool.difference(added_blk.txns)
@@ -373,6 +387,7 @@ if __name__ == "__main__":
             #Determine if this blockchain becomes longest
             if added_blk.level > peers[receiver_index].last_block.level:
                 peers[receiver_index].last_block = added_blk
+                peers[receiver_index].balances = added_blk.final_balance
 
             #Send block to neighbors
             for neighbor in peers[receiver_index].connected_peers:
@@ -382,14 +397,28 @@ if __name__ == "__main__":
             
                 ro, c = links[(receiver_index, neighbor_index)] # link attr is (ro, c), ro in s, c in Mbps
                 d = np.random.exponential(scale = 96*1e3/(c*1e6))
-                prop_time = ro + 8*1e3/(c*1e6) + d
+                prop_time = ro + 8*1e3*blk.size/(c*1e6) + d
                 
                 data = {'sender': receiver_index, 'blk': blk, 'receiver': neighbor_index}
                 
                 event_queue.put((curr_time + prop_time, "BlkReceived", data))
             print(f"Block received by {receiver_index} at time {curr_time}")
 
+    #Save blockchain tree along with time for each peer using level tree traversal
+    treeFile = open('tree.txt', 'w')
+    for i in range(n):
+        gen_blk = peers[i].gen_block
+        q = [gen_blk]
+        print(f"Peer {i}", file=treeFile)
+        while len(q) > 0:
+            q_len = len(q)
+            while q_len > 0:
+                p = q[0]
+                q.pop(0)
+                print(f"{p.blk_id} : {p.time} ", end = "", file=treeFile)
+                for child in p.children:
+                    q.append(child)
+                q_len -= 1
+            print("",file=treeFile)
 
-
-
-
+    #Saving block related info into a file for debugging
