@@ -126,9 +126,9 @@ def init_Peers(n, z0, z1, balance_scale):
         slow = i in slow_peers
         low_cpu = i in low_cpu_peers
         if low_cpu:
-            hashing_power = 1/(10*(1-z1) + z1)
+            hashing_power = 1/((10*(1-z1) + z1)*n)
         else:
-            hashing_power = 10/(10*(1-z1) + z1)
+            hashing_power = 10/((10*(1-z1) + z1)*n)
         peers.append(Peer(n, slow, low_cpu, balances, format(i, '04d'), hashing_power, gen_block))
 
     return peers
@@ -320,6 +320,7 @@ if __name__ == "__main__":
                 time, new_blk = peers[creator_index].generate_block(peers[creator_index].last_block)
                 data = {'blk': new_blk}
                 event_queue.put((curr_time + time, "BlkGenerated", data))
+                print(f"Block {blk.blk_id} failed")
                 continue
 
             peers[creator_index].balances = blk.final_balance
