@@ -1,7 +1,7 @@
 import argparse
 from queue import PriorityQueue
 import numpy as np
-from random import sample
+from random import sample, seed
 import copy
 import os
 
@@ -220,12 +220,16 @@ if __name__ == "__main__":
     parser.add_argument('--z0', type = float, required = True)
     parser.add_argument('--z1', type = float, required = True)
     parser.add_argument('--T_tx', type = float, required = True)
+    parser.add_argument('--seed', type = int, default=0)
+    
     args = parser.parse_args()
     n = args.n
     z0 = args.z0/100
     z1 = args.z1/100
     T_tx = args.T_tx
     balance_scale = 100
+    np.random.seed(args.seed)
+    seed(args.seed)
 
     # Initialize peers: 
     peers = init_Peers(n, z0, z1, balance_scale)
@@ -411,10 +415,10 @@ if __name__ == "__main__":
             #print(f"Block received by {receiver_index} at time {curr_time}")
 
     #Save blockchain tree along with time for each peer using level tree traversal
-    if not os.path.exists('trees'):
-        os.mkdir('trees')
+    if not os.path.exists(f'./trees/trees_{args.n}_{args.z0}_{args.z1}_{args.T_tx}_{args.seed}'):
+        os.mkdir(f'./trees/trees_{args.n}_{args.z0}_{args.z1}_{args.T_tx}_{args.seed}')
     for i in range(n):
-        treeFileStr = 'trees/tree' + str(i) + '.txt'
+        treeFileStr = f'./trees/trees_{args.n}_{args.z0}_{args.z1}_{args.T_tx}_{args.seed}/tree' + str(i) + '.txt'
         treeFile = open(treeFileStr, 'w')
         gen_blk = peers[i].gen_block
         q = [gen_blk]
@@ -424,13 +428,13 @@ if __name__ == "__main__":
                 p = q[0]
                 q.pop(0)
                 if(p.parent != None):
-                    print(f"{p.blk_id} ({p.parent.blk_id}) : {p.time} ", end = "", file=treeFile)
+                    print(f"{p.blk_id} ({p.parent.blk_id}) : {p.time} ", file=treeFile)
                 else:
-                    print(f"{p.blk_id} (genesis block) : {p.time} ", end = "", file=treeFile)
+                    print(f"{p.blk_id} (genesis block) : {p.time} ", file=treeFile)
                 for child in p.children:
                     q.append(child)
                 q_len -= 1
-            print("",file=treeFile)
+            # print("",file=treeFile)
     treeFile.close()
 
     #Saving block related info into a file for debugging

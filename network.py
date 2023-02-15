@@ -1,7 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import os
-import graphviz
+import graphviz, argparse
 # G = nx.petersen_graph()
 
 # subax1 = plt.subplot(121)
@@ -15,8 +15,20 @@ import graphviz
 import networkx as nx
 import random
 
-dir_path = "./trees"
-num_trees = 20
+# dir_path = "./trees"
+# num_trees = 20
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--n', type = int, required=True)
+parser.add_argument('--z0', type = float, required = True)
+parser.add_argument('--z1', type = float, required = True)
+parser.add_argument('--T_tx', type = float, required = True)
+parser.add_argument('--seed', type = int, default=0)
+
+args = parser.parse_args()
+
+num_trees = args.n
+dir_path  = f'./trees/trees_{args.n}_{args.z0}_{args.z1}_{args.T_tx}_{args.seed}'
 
     
 def hierarchy_pos(G, root=None, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5):
@@ -68,6 +80,8 @@ for peer_index in range(num_trees):
     nodes = []
     parents = []
     times = []
+    
+    num_blocks = len(lines) - 1
 
     for i in range(2,len(lines)):
         line = lines[i].strip()
@@ -81,7 +95,7 @@ for peer_index in range(num_trees):
         parents.append(parent)
         times.append(round(time, 3))
         
-        print(f"node {node}, parent {parent}, time {time}")
+        # print(f"node {node}, parent {parent}, time {time}")
         
 
     G = nx.Graph()
@@ -90,19 +104,27 @@ for peer_index in range(num_trees):
     color_map = ['red']
 
     labels = {}
-    labels[root] = root + ", Time: 0"
+    labels[root] = "Time: 0"
+    # labels[root] = root + ", Time: 0"
 
     for i in range(len(nodes)):
         G.add_node(nodes[i])
         G.add_edge(nodes[i], parents[i])
         color_map.append('green')
-        labels[nodes[i]] = (nodes[i] + f", Time: {times[i]}")
+        # labels[nodes[i]] = (nodes[i] + f", Time: {times[i]}")
+        labels[nodes[i]] = (f"Time: {times[i]}")
         
     pos = hierarchy_pos(G, root)
+    
 
-
+    fig = plt.figure()
+    fig.set_figheight(1*num_blocks)
+    fig.set_figwidth(6)
     # subax1 = plt.subplot(121)
     nx.draw(G,  labels = labels, node_color = color_map,pos = pos, with_labels = True, font_weight = 'bold')
     
-    os.mkdir(dir_path + "/visual/")
+    if(not os.path.exists(dir_path + "/visual/")):
+        os.mkdir(dir_path + "/visual/")
+    # plt.show()
     plt.savefig(dir_path + "/visual/" + f"tree{peer_index}.png")
+    del G
