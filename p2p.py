@@ -29,6 +29,7 @@ class Peer:
         self.block_generated = 1
         self.block_set = {self.gen_block.blk_id : self.gen_block}
         self.block_cache = set([])
+        self.all_txns = set([])
 
     def add_neighbor(self, neighbor):
         self.connected_peers.add(neighbor)
@@ -275,6 +276,7 @@ if __name__ == "__main__":
             
             # Put transaction to own txnset
             peers[payer_index].txn_pool.add(txn)
+            peers[payer_index].all_txns.add(txn)
             
             # Broadcast generated transaction to all neighbors
             for neighbor in peers[payer_index].connected_peers:
@@ -299,10 +301,11 @@ if __name__ == "__main__":
             # If transaction already received, do nothing
             # else, broadcast to all neighbors except from the one you received
             
-            if(txn in peers[receiver].txn_pool):
+            if(txn in peers[receiver].all_txns):
                 continue
 
             peers[receiver].txn_pool.add(txn)
+            peers[receiver].all_txns.add(txn)
     
             for neighbor in peers[receiver].connected_peers:
                 neighbor_index = neighbor.index
@@ -386,15 +389,22 @@ if __name__ == "__main__":
             for block_data in peers[receiver_index].block_cache:
                 if block_data['blk'].parent.blk_id == added_blk.blk_id:
                     peers[receiver_index].block_cache.remove(block_data)
-                    event_queue.put((curr_time, "BlkReceived", block_data))
+                    event_queue.put((curr_time + 1e-6, "BlkReceived", block_data))
 
             #Remove txns from txn pool
-            peers[receiver_index].txn_pool = peers[receiver_index].txn_pool.difference(added_blk.txns)
+            #peers[receiver_index].txn_pool = peers[receiver_index].txn_pool.difference(added_blk.txns)
 
             #Determine if this blockchain becomes longest
             if added_blk.level > peers[receiver_index].last_block.level:
                 peers[receiver_index].last_block = added_blk
                 peers[receiver_index].balances = added_blk.final_balance
+                curr_block = peers[receiver_index].last_block
+                peers[receiver_index].txn_pool = copy.deepcopy(peers[receiver_index].all_txns)
+                while curr_block.parent != None:
+                    peers[receiver_index].txn_pool = peers[receiver_index].txn_pool.difference(curr_block.txns)
+                    curr_block = curr_block.parent
+
+                #Generate new block
                 time, new_blk = peers[receiver_index].generate_block(peers[receiver_index].last_block)
                 data = {'blk': new_blk}
                 event_queue.put((curr_time + time, "BlkGenerated", data))
