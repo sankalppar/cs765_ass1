@@ -424,9 +424,9 @@ if __name__ == "__main__":
                 p = q[0]
                 q.pop(0)
                 if(p.parent != None):
-                    print(f"{p.blk_id}({p.parent.blk_id}) : {p.time} ", end = "", file=treeFile)
+                    print(f"{p.blk_id} ({p.parent.blk_id}) : {p.time} ", end = "", file=treeFile)
                 else:
-                    print(f"{p.blk_id}(genesis block) : {p.time} ", end = "", file=treeFile)
+                    print(f"{p.blk_id} (genesis block) : {p.time} ", end = "", file=treeFile)
                 for child in p.children:
                     q.append(child)
                 q_len -= 1
