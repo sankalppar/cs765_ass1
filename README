@@ -1,2 +1,6 @@
 To run the code simply use the command 'python3 p2p.py --n <N> --z0 <Z0> --z1 <Z1> --T_tx <T_tx>'
-where <N>, <Z0>, <Z1> and <T_tx> are values of n, z0, z1 and T_tx respectively.
+where <N>, <Z0>, <Z1> and <T_tx> are values of n, z0, z1 and T_tx respectively. This will create
+a trees directory if it does not already exist containing folder trees_<N>_<z0>_<Z1>_<T_tx>_<seed>,
+the seed can be set using --seed <seed> argument while running but is set to 0 by default. This
+folder contains tree for each node with a tree being of format with each line containing a block
+with '<blk_id>(<parent_id>): <receiving_time>'.
